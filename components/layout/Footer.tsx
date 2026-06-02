@@ -46,17 +46,28 @@ export default function Footer() {
   const [loading, setLoading] = useState(false)
 
   async function handleNewsletter(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email || loading) return
-    setLoading(true)
-    // Simulate — connect to Supabase on deploy
-    await new Promise((r) => setTimeout(r, 800))
-    setJoined(true)
-    setLoading(false)
-    setEmail('')
-    setTimeout(() => setJoined(false), 4000)
-  }
+  e.preventDefault()
+  if (!email || loading) return
+  setLoading(true)
 
+  try {
+    const res = await fetch('/api/newsletter', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      setJoined(true)
+      setEmail('')
+      setTimeout(() => setJoined(false), 4000)
+    }
+  } catch {
+    console.error('Newsletter error')
+  } finally {
+    setLoading(false)
+  }
+}
   return (
     <footer
       id="contact"

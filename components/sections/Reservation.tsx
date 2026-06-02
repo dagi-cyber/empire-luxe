@@ -46,25 +46,37 @@ export default function Reservation() {
     return null
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault()
+  setError('')
 
-    const err = validate()
-    if (err) { setError(err); return }
+  const err = validate()
+  if (err) { setError(err); return }
 
-    setLoading(true)
+  setLoading(true)
 
-    // ── For now: simulate success (we connect real backend later) ──
-    await new Promise((r) => setTimeout(r, 1200))
-    setSuccess(true)
+  try {
+    const res = await fetch('/api/reservation', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(form),
+    })
+
+    const data = await res.json()
+
+    if (data.success) {
+      setSuccess(true)
+      setForm(EMPTY)
+      setTimeout(() => setSuccess(false), 6000)
+    } else {
+      setError(data.error || 'Something went wrong. Please try again.')
+    }
+  } catch {
+    setError('Network error. Please check your connection.')
+  } finally {
     setLoading(false)
-    setForm(EMPTY)
-
-    // Auto-hide success after 5 seconds
-    setTimeout(() => setSuccess(false), 5000)
   }
-
+}
   return (
     <section
       id="reservation"
@@ -131,7 +143,7 @@ export default function Reservation() {
               }}>
                 <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>✓</div>
                 <p style={{ fontSize: '0.68rem', color: 'var(--gold)', letterSpacing: '0.1em' }}>
-                  Reservation confirmed! We'll be in touch shortly.
+                  Reservation confirmed! We will be in touch shortly.
                 </p>
               </div>
             )}
@@ -284,7 +296,7 @@ export default function Reservation() {
                 marginTop:     '0.8rem',
                 letterSpacing: '0.06em',
               }}>
-                We'll confirm your booking within 2 hours via email.
+                We will confirm your booking within 2 hours via email.
               </p>
             </form>
           </div>
