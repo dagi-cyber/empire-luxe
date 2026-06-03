@@ -1,43 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
+import { sendConfirmationEmail, sendNotificationEmail } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json()
+    const body = await req.json()
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const {
+      firstName, lastName, email, phone,
+      date, time, guests, seating, requests,
+    } = body
+
+    // ── Validate ──────────────────────────────────
+    if (!firstName || !lastName || !email || !phone || !date || !time) {
       return NextResponse.json(
-        { success: false, error: 'Valid email required.' },
+        { success: false, error: 'Please fill in all required fields.' },
         { status: 400 }
       )
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid email address.' },
+        { status: 400 }
+      )
+    }
+
+    // ── Save to Supabase ──────────────────────────
     const supabase = createAdminClient()
 
-    const { error } = await supabase
-      .from('newsletter_subscribers')
-      .upsert(
-        { email, subscribed_at: new Date().toISOString() },
-        { onConflict: 'email' }
-      )
+    const { data, error: dbError } = await supabase
+      .from('reservations')
+      .insert({
+        first_name:       firstName,
+        last_name:        lastName,
+        email,
+        phone,
+        date,
+        time,
+        guests,
+        seating,
+        special_requests: requests || null,
+        status:           'pending',
+      })
+      .select()
+      .single()
 
-    if (error) {
-      console.error('Newsletter error:', error)
+    if (dbError) {
+      console.error('Supabase error:', dbError)
       return NextResponse.json(
-        { success: false, error: 'Failed to subscribe.' },
+        { success: false, error: 'Failed to save reservation. Please try again.' },
         { status: 500 }
       )
     }
 
+    // ── Send emails (both in parallel) ───────────
+    await Promise.allSettled([
+      sendConfirmationEmail({
+        firstName, lastName, email, date, time, guests, seating,
+      }),
+      sendNotificationEmail({
+        firstName, lastName, email, phone,
+        date, time, guests, seating,
+        specialRequests: requests || '',
+      }),
+    ])
+
     return NextResponse.json({
       success: true,
-      message: "You're on the list!",
+      message: 'Reservation confirmed!',
+      id:      data.id,
     })
 
   } catch (err) {
-    console.error('Newsletter API error:', err)
+    console.error('Reservation API error:', err)
     return NextResponse.json(
-      { success: false, error: 'Something went wrong.' },
+      { success: false, error: 'Something went wrong. Please try again.' },
       { status: 500 }
     )
   }
