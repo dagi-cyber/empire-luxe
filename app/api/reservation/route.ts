@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (err) {
-    console.error('Reservation API error:', err)
+  console.error('Reservation API error:', JSON.stringify(err, null, 2))
+  console.error('Full error:', err)
     return NextResponse.json(
       { success: false, error: 'Something went wrong. Please try again.' },
       { status: 500 }
