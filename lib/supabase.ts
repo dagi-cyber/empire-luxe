@@ -1,21 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Browser-safe client
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
-)
+const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL  || 'https://placeholder.supabase.co'
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+const supabaseService = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
 
-// Server-only admin client — never use in components
+// Browser-safe client
+export const supabase = createClient(supabaseUrl, supabaseAnon)
+
+// Server-only admin client
 export function createAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession:   false,
-      },
-    }
-  )
+  return createClient(supabaseUrl, supabaseService, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession:   false,
+    },
+  })
 }
